@@ -7,6 +7,42 @@ import math
 import cv2
 import numpy as np
 
+
+def OtsuThreshold(img):
+    maxval = np.max(img)
+    vectimg = np.reshape(img,[img.shape[0]*img.shape[1],])
+    histData = np.uint8(np.zeros([maxval+1,1]))
+    for i in vectimg:
+        histData[i]=histData[i]+1
+    
+    total = vectimg.shape[0]
+    sum_ = 0
+    for i in range(256): 
+        sum_ = sum_+ i*histData[i]
+        
+    sumB = 0
+    wB = 0
+    wF = 0
+    varMax = (float)(0)
+    threshold = 0;
+    for i in range(256):
+        wB = wB + histData[i]
+        if(wB==0):
+            continue
+        wF = total-wB;
+        if(wF==0):
+            break
+        sumB = sumB + i*histData[i]
+        mB = sumB/(float)(wB)
+        mF = (sum_-sumB)/(float)(wF)
+        varBetween = wB*wF*(mB-mF)*(mB-mF)
+        if(varBetween>varMax):
+            varMax = varBetween
+            threshold = i
+    binaryim = np.uint8(np.zeros(img.shape))
+    binaryim[img>threshold] = 255;
+    return binaryim
+
 # Function based C_means Clustering
 def LUT2label(im,LUT):
     Imin = np.min(im)
@@ -71,10 +107,12 @@ def FastCmeans(im,c=2):
 #load image    
 #Options = dict(defaultextension = '.jpg',filetypes = [('Imag','*.jpg *.png *.bmp *.JPG *.PNG *.BMP *.TIF '),('All files','*.*')])
 #file_path = tkF.askopenfilename(**Options)
-#imag = cv2.imread(str(file_path.encode('euc-kr')),0) #?먮쾲夷?蹂?? color異뺤쓽 媛?닔
+#imag = cv2.imread(str(file_path.encode('euc-kr')),0) #두번쨰 변수: color축의 갯수
 #
 imag = cv2.imread("Test2.jpg",0)
 imag = cv2.resize(imag,(imag.shape[1]/4,imag.shape[0]/4),interpolation=cv2.INTER_CUBIC)
+
+imag = OtsuThreshold(imag)
 rows,cols= imag.shape
 imag = np.uint8(255*np.ones([rows,cols]) - imag)
 #cv2.imshow('firstimag',imag)
@@ -97,7 +135,6 @@ imag = np.uint8(255*np.ones([rows,cols]) - imag)
 ###### making closing image###### 
 kernel = np.ones((5,5),np.uint8)
 closing = cv2.morphologyEx(imag,cv2.MORPH_CLOSE,kernel)
-
 
 binaryimg = closing/255
 imagesum = np.sum(binaryimg)/(float)(rows*cols)
@@ -123,3 +160,4 @@ for i in range(rows):
     proj[i,:] = np.sum(proj2[i-3:i+3,:],axis=0)
     
 proj = proj/7
+
